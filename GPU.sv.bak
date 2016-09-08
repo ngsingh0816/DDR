@@ -1,0 +1,4 @@
+module GPU(input clk, input reset,
+				input logic[5503:0] sprites,									// 85bits x 64 sprites
+				input logic[9:0] DrawX, input logic[8:0] DrawY,
+				output logic[7:0] red, green, blue);

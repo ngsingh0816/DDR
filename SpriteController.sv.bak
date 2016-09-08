@@ -1,0 +1,3 @@
+module SpriteController(input clk, input reset,
+								input start,
+								

@@ -1,0 +1,78 @@
+module SpriteDrawer(input clk, input reset,
+				input logic[5503:0] sprites,									// 86bits x 64 sprites
+				input logic[9:0] xPos, input logic[8:0] yPos, input display,
+				output logic[7:0] red, green, blue);
+				
+				// Sprite table format
+				// sprite type (4 bits), x pos (10 bits), y pos (9 bits), width (10 bits), height (9 bits), BGR (24 bits), address (20 bits) = 86 bits
+				// low bit to high bit
+				// sprite type (0:3), x pos (4:13), y pos (14:22), width (23:32), height (33:41), blue (42:49), green (50:57), red (58:65), address(66:85)
+				
+				/*
+					sprite list:
+					0 - none
+					1 - fill rectangle
+					2 - stroke rectangle (address = stroke width)
+				*/
+				
+				// Intrenals
+				logic[23:0] backgroundColor;
+				// Internal cached table
+				logic[5503:0] spriteTable;
+				
+				always_ff @ (posedge clk or posedge reset) begin
+					if (reset) begin
+						spriteTable = 5504'b0;
+						backgroundColor = 24'h000000;	// Black
+						
+					end else begin
+						// Cache at the beginning of each frame (so there are no artifacts)
+						if (xPos == 0 && yPos == 0)
+							spriteTable <= sprites;
+					end
+				end
+				
+				// Determine the correct color for the given location
+				logic[85:0] sprite;
+				
+				logic done;
+				always_comb begin
+					if (!display) begin
+						red = 0;
+						green = 0;
+						blue = 0;
+						sprite = 0;
+						done = 0;
+					end else begin
+						done = 1'b0;
+						// Default to background color
+						red = backgroundColor[23:16];
+						green = backgroundColor[15:8];
+						blue = backgroundColor[7:0];
+						// Loop through all the sprites
+						for (int z = 0; z < 64; z++) begin
+							if (!done) begin
+								sprite = spriteTable[(z * 86) +: 86];
+								unique case (sprite[3:0])
+									4'd1: begin
+										// Fill rectangle
+										if (sprite[13:4] <= xPos && (sprite[13:4] + sprite[32:23]) >= xPos &&
+											 sprite[22:14] <= yPos && (sprite[22:14] + sprite[41:33]) >= yPos) begin
+											 red = sprite[65:58];
+											 green = sprite[57:50];
+											 blue = sprite[49:42];
+										end
+									end
+									default: begin
+										// None
+										// Don't process any more after the first empty sprite
+										done = 1'b1;
+									end
+								endcase
+							end else begin
+								sprite = 86'b0;
+							end
+						end
+					end
+				end
+endmodule

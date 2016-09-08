@@ -1,0 +1,1 @@
+module SpriteCalculator(input logic[5631:0] spriteTable, 
